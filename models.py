@@ -53,6 +53,7 @@ class Resnet(nn.Module):
         resblock_kernel_size: int = 3,
         stem_conv_size: int = 7,
         stem_pool_size: int = 3,
+        stem_downsample: bool = True,
         expansion: int = 4,
     ):
         super(Resnet, self).__init__()
@@ -63,6 +64,7 @@ class Resnet(nn.Module):
             out_channels=stem_channels,
             conv_size=stem_conv_size,
             pool_size=stem_pool_size,
+            downsample=stem_downsample,
         )
         layers = []
         in_channels = stem_channels
@@ -110,17 +112,20 @@ class ResnetStem(nn.Module):
         out_channels: int,
         conv_size: int,
         pool_size: int,
+        downsample: bool,
     ):
         super(ResnetStem, self).__init__()
         self.conv_layer = conv_bn(
             in_channels,
             out_channels,
             kernel_size=conv_size,
-            stride=2,
+            stride=2 if downsample else 1,
             padding=conv_size // 2,
         )
         self.max_pool = nn.MaxPool2d(
-            kernel_size=pool_size, stride=2, padding=pool_size // 2
+            kernel_size=pool_size,
+            stride=2 if downsample else 1,
+            padding=pool_size // 2,
         )
 
     def forward(self, x):
@@ -140,7 +145,6 @@ class ResnetLayer(nn.Module):
     ):
         super(ResnetLayer, self).__init__()
         downsample = in_channels != out_channels
-        print(downsample)
         self.input_block = BottleneckProjection(
             expansion=expansion,
             in_channels=in_channels,
