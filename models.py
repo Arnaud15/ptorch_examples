@@ -33,9 +33,11 @@ class MLP(nn.Module):
         return x
 
 
-def conv_bn(in_channels: int, out_channels: int, *args, **kwargs):
+def conv_bn(
+    in_channels: int, out_channels: int, kernel_size: int, *args, **kwargs
+):
     return nn.Sequential(
-        nn.Conv2d(in_channels, out_channels, *args, **kwargs),
+        nn.Conv2d(in_channels, out_channels, kernel_size, *args, **kwargs),
         nn.BatchNorm2d(out_channels),
     )
 
@@ -46,30 +48,37 @@ class Resnet(nn.Module):
         img_channels: int,
         n_classes: int,
         extra_blocks_per_layer: List[int],
-        resnet_channels: int = 64,
+        resnet_channels: List[int],
+        stem_channels: int,
+        resblock_kernel_size: int = 3,
         stem_conv_size: int = 7,
         stem_pool_size: int = 3,
         expansion: int = 4,
     ):
         super(Resnet, self).__init__()
+        assert len(extra_blocks_per_layer) > 0
+        assert len(extra_blocks_per_layer) == len(resnet_channels)
         self.stem = ResnetStem(
             in_channels=img_channels,
-            out_channels=resnet_channels,
+            out_channels=stem_channels,
             conv_size=stem_conv_size,
             pool_size=stem_pool_size,
         )
         layers = []
-        in_channels = resnet_channels
-        for n_blocks in extra_blocks_per_layer:
+        in_channels = stem_channels
+        for (n_blocks, channel_size) in zip(
+            extra_blocks_per_layer, resnet_channels
+        ):
             layers.append(
                 ResnetLayer(
                     n_extra_blocks=n_blocks,
                     expansion=expansion,
                     in_channels=in_channels,
-                    out_channels=2 * in_channels,
+                    out_channels=channel_size,
+                    kernel_size=resblock_kernel_size,
                 )
             )
-            in_channels *= 2
+            in_channels = channel_size * expansion
         self.layers = nn.ModuleList(layers)
         self.head = ResnetHead(in_channels=in_channels, n_classes=n_classes)
 
@@ -89,6 +98,7 @@ class ResnetHead(nn.Module):
 
     def forward(self, x):
         x = self.avg_pool(x)
+        x = x.view(x.size(0), -1)
         x = self.projection_head(x)
         return x
 
@@ -126,15 +136,17 @@ class ResnetLayer(nn.Module):
         expansion: int,
         in_channels: int,
         out_channels: int,
+        kernel_size: int = 3,
     ):
         super(ResnetLayer, self).__init__()
-        assert in_channels <= out_channels
-        downsample = in_channels < out_channels
+        downsample = in_channels != out_channels
+        print(downsample)
         self.input_block = BottleneckProjection(
             expansion=expansion,
             in_channels=in_channels,
             out_channels=out_channels,
             downsample=downsample,
+            kernel_size=kernel_size,
         )
         self.later_blocks = nn.ModuleList(
             [
@@ -142,6 +154,7 @@ class ResnetLayer(nn.Module):
                     expansion=expansion,
                     in_channels=out_channels * expansion,
                     out_channels=out_channels,
+                    kernel_size=kernel_size,
                 )
                 for _ in range(n_extra_blocks)
             ]
@@ -161,10 +174,16 @@ class BottleneckProjection(nn.Module):
         in_channels: int,
         out_channels: int,
         downsample: bool,
+        kernel_size: int = 3,
     ):
         super(BottleneckProjection, self).__init__()
         self.expansion = expansion
-        self.projection = conv_bn(in_channels, out_channels * expansion)
+        self.projection = conv_bn(
+            in_channels,
+            out_channels * expansion,
+            kernel_size=1,
+            stride=2 if downsample else 1,
+        )
         self.compress = conv_bn(
             in_channels,
             out_channels,
@@ -173,7 +192,11 @@ class BottleneckProjection(nn.Module):
             padding=0,
         )
         self.conv = conv_bn(
-            out_channels, out_channels, kernel_size=3, stride=1, padding=1
+            out_channels,
+            out_channels,
+            kernel_size=kernel_size,
+            stride=1,
+            padding=kernel_size // 2,
         )
         self.expand = conv_bn(
             out_channels,
@@ -194,7 +217,13 @@ class BottleneckProjection(nn.Module):
 
 
 class BottleneckPlain(nn.Module):
-    def __init__(self, expansion: int, in_channels: int, out_channels: int):
+    def __init__(
+        self,
+        expansion: int,
+        in_channels: int,
+        out_channels: int,
+        kernel_size: int = 3,
+    ):
         super(BottleneckPlain, self).__init__()
         assert in_channels == out_channels * expansion
         self.expansion = expansion
@@ -202,7 +231,11 @@ class BottleneckPlain(nn.Module):
             in_channels, out_channels, kernel_size=1, stride=1, padding=0
         )
         self.conv = conv_bn(
-            out_channels, out_channels, kernel_size=3, stride=1, padding=1
+            out_channels,
+            out_channels,
+            kernel_size=kernel_size,
+            stride=1,
+            padding=kernel_size // 2,
         )
         self.expand = conv_bn(
             out_channels,
