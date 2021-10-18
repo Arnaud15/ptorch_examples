@@ -1,5 +1,5 @@
 import os
-from typing import Callable, Optional
+from typing import Any, Callable, Optional
 
 import torch
 import torch.nn as nn
@@ -14,10 +14,13 @@ SAVE_PATH = os.path.join("data", "checkpoints")
 if not os.path.isdir(SAVE_PATH):
     os.mkdir(SAVE_PATH)
 
+Scheduler = (Any,)
+
 
 def training_loop(
     model: nn.Module,
     opt: optim.Optimizer,
+    scheduler: Scheduler,
     train_loader: DataLoader,
     eval_loader: DataLoader,
     loss_fn: Callable,
@@ -51,6 +54,7 @@ def training_loop(
             opt.zero_grad()
             loss_item.backward()
             opt.step()
+            scheduler.step()
 
             train_loss = update_ewma(
                 obs=loss_item, prev=train_loss, alpha=smoothing_alpha

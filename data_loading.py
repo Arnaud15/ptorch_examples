@@ -52,6 +52,9 @@ def get_image_data_loader(
             val_dataset = None
             train_dataset = dataset
     # Get dataloaders and return
+    print(
+        f"Dataset lengths: train-{len(train_dataset)}, val-{0 if val_dataset is None else len(val_dataset)}"
+    )
     return (
         DataLoader(
             train_dataset,
