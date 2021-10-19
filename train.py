@@ -49,6 +49,7 @@ def training_loop(
     train_steps = 0
     eval_steps = 0
     for epoch_ix in range(n_epochs):
+        model.train()
         for (x, y) in train_loader:
             x = x.to(device)
             y = y.to(device)
@@ -73,6 +74,8 @@ def training_loop(
             if write_every and train_steps % write_every == 0:
                 writer.add_scalar("Loss/train", loss_item, train_steps)
                 writer.add_scalar("Metric/train", metric_item, train_steps)
+
+        model.eval()
         with torch.no_grad():
             for (x, y) in eval_loader:
                 x = x.to(device)
