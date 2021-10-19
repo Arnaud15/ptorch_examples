@@ -45,4 +45,4 @@ def test_loop(
         show(make_grid(x))
         y_hat = torch.max(model(x.to(device)), 1)[1]
         print(f"Grid generated with labels: {y.detach().numpy()}")
-        print(f"Corresponding predictions: {y_hat.detach().numpy()}")
+        print(f"Corresponding predictions: {y_hat.detach().cpu().numpy()}")
