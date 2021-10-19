@@ -24,6 +24,7 @@ def training_loop(
     train_loader: DataLoader,
     eval_loader: DataLoader,
     loss_fn: Callable,
+    device: Any,
     n_epochs: int,
     print_every: int = 0,
     write_every: int = 0,
@@ -49,6 +50,8 @@ def training_loop(
     eval_steps = 0
     for epoch_ix in range(n_epochs):
         for (x, y) in train_loader:
+            x = x.to(device)
+            y = y.to(device)
             y_hat = model(x)
             loss_item = loss_fn(y_hat, y)
             opt.zero_grad()
@@ -72,6 +75,8 @@ def training_loop(
                 writer.add_scalar("Metric/train", metric_item, train_steps)
         with torch.no_grad():
             for (x, y) in eval_loader:
+                x = x.to(device)
+                y = y.to(device)
                 y_hat = model(x)
                 loss_item = loss_fn(y_hat, y)
 
