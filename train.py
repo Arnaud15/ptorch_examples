@@ -9,15 +9,11 @@ from torch.utils.tensorboard import SummaryWriter
 
 from utils import update_ewma
 
-# TODO move in constants file
-SAVE_PATH = os.path.join("data", "checkpoints")
-if not os.path.isdir(SAVE_PATH):
-    os.mkdir(SAVE_PATH)
-
 Scheduler = (Any,)
 
 
 def training_loop(
+    name: str,  # identifier for the current run
     model: nn.Module,
     opt: optim.Optimizer,
     scheduler: Scheduler,
@@ -40,9 +36,15 @@ def training_loop(
         assert print_every > 0
     if write_every:
         assert write_every > 0
+        logs_path = os.path.join("data", "logs")
+        if not os.path.isdir(logs_path):
+            os.mkdir(logs_path)
     if check_every:
         assert check_every > 0
-    writer = SummaryWriter()
+        save_path = os.path.join("data", "checkpoints")
+        if not os.path.isdir(save_path):
+            os.mkdir(save_path)
+    writer = SummaryWriter(log_dir=os.path.join(logs_path, name))
 
     train_loss = None
     eval_loss = None
@@ -75,6 +77,17 @@ def training_loop(
                 writer.add_scalar("Loss/train", loss_item, train_steps)
                 writer.add_scalar("Metric/train", metric_item, train_steps)
 
+            if check_every and train_steps % check_every == 0:
+                torch.save(
+                    {
+                        "epoch": epoch_ix + 1,
+                        "model_state": model.state_dict(),
+                        "optim_state": opt.state_dict(),
+                        "eval_loss": eval_loss,
+                    },
+                    os.path.join(save_path, f"{name}-{train_steps}.pt"),
+                )
+
         model.eval()
         with torch.no_grad():
             for (x, y) in eval_loader:
@@ -100,13 +113,3 @@ def training_loop(
                 if write_every and eval_steps % write_every == 0:
                     writer.add_scalar("Loss/eval", loss_item, eval_steps)
                     writer.add_scalar("Metric/eval", metric_item, eval_steps)
-        if check_every and (epoch_ix + 1) % check_every == 0:
-            torch.save(
-                {
-                    "epoch": epoch_ix + 1,
-                    "model_state": model.state_dict(),
-                    "optim_state": opt.state_dict(),
-                    "eval_loss": eval_loss,
-                },
-                SAVE_PATH,
-            )
