@@ -39,12 +39,12 @@ def training_loop(
         logs_path = os.path.join("data", "logs")
         if not os.path.isdir(logs_path):
             os.mkdir(logs_path)
+        writer = SummaryWriter(log_dir=os.path.join(logs_path, name))
     if check_every:
         assert check_every > 0
         save_path = os.path.join("data", "checkpoints")
         if not os.path.isdir(save_path):
             os.mkdir(save_path)
-    writer = SummaryWriter(log_dir=os.path.join(logs_path, name))
 
     train_loss = None
     eval_loss = None
