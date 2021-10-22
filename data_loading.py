@@ -1,10 +1,41 @@
 from typing import Callable, Optional, Tuple
 
+import torch
 import torchvision.transforms as T
 from torch.utils.data import DataLoader, Subset, random_split
-from torchvision.datasets import CIFAR10, MNIST, FashionMNIST
+from torchvision.datasets import CIFAR10, MNIST, FashionMNIST, ImageNet
 
 DATA_DIR = "data"
+
+
+def transforms_image_net(
+    crop: bool = True,
+    flip: bool = True,
+    colors: bool = True,
+    standardize: bool = True,
+) -> Callable:
+    """ImageNet image transforms."""
+    transforms = []
+    if crop:
+        transforms.append(
+            T.RandomResizedCrop(
+                size=224, scale=(0.08, 1.0), ratio=(3 / 4, 4 / 3)
+            )
+        )
+    if flip:
+        transforms.append(T.RandomHorizontalFlip(p=0.5))
+    if colors:
+        transforms.append(
+            T.ColorJitter(
+                brightness=(0.6, 1.4), saturation=(0.6, 1.4), hue=(0.6, 1.4)
+            )
+        )
+    if standardize:
+        transforms.append(
+            T.Normalize((123.68, 116.779, 103.939), (58.393, 51.12, 57.375))
+        )
+    # TODO: PCA colors Augment
+    return T.compose(transforms)
 
 
 def get_image_data_loader(
@@ -34,6 +65,15 @@ def get_image_data_loader(
     elif name == "cifar10":
         dataset = CIFAR10(
             root=DATA_DIR, train=train, transform=transform, download=True
+        )
+    elif name == "imagenet":
+        dataset = ImageNet(
+            root=DATA_DIR,
+            train=train,
+            transform=transforms_image_net()
+            if transform is None
+            else transform,
+            download=True,
         )
     else:
         raise ValueError("supported datasets are 'mnist', 'fmnist', 'cifar10'")
