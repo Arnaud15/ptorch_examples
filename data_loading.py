@@ -10,32 +10,38 @@ DATA_DIR = "data"
 
 def transforms_image_net(
     crop: bool = True,
+    crop_size: Optional[int] = None,
     flip: bool = True,
     colors: bool = True,
     standardize: bool = True,
+    means: Optional[Tuple[float]] = None,
+    stds: Optional[Tuple[float]] = None,
 ) -> Callable:
     """ImageNet image transforms."""
     transforms = []
     if crop:
         transforms.append(
             T.RandomResizedCrop(
-                size=224, scale=(0.08, 1.0), ratio=(3 / 4, 4 / 3)
+                size=224 if crop_size is None else crop_size,
+                scale=(0.08, 1.0),
+                ratio=(3 / 4, 4 / 3),
             )
         )
     if flip:
         transforms.append(T.RandomHorizontalFlip(p=0.5))
     if colors:
         transforms.append(
-            T.ColorJitter(
-                brightness=(0.6, 1.4), saturation=(0.6, 1.4), hue=(0.6, 1.4)
-            )
+            T.ColorJitter(brightness=0.4, saturation=0.4, hue=0.4)
         )
     if standardize:
         transforms.append(
-            T.Normalize((123.68, 116.779, 103.939), (58.393, 51.12, 57.375))
+            T.Normalize(
+                (123.68, 116.779, 103.939) if means is None else means,
+                (58.393, 51.12, 57.375) if stds is None else stds,
+            )
         )
     # TODO: PCA colors Augment
-    return T.compose(transforms)
+    return T.Compose(transforms)
 
 
 def get_image_data_loader(
