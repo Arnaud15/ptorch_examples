@@ -34,10 +34,12 @@ def transforms_image_net(
             T.ColorJitter(brightness=0.4, saturation=0.4, hue=0.4)
         )
     if standardize:
+        means = (123.68, 116.779, 103.939) if means is None else means
+        stds = (58.393, 51.12, 57.375) if stds is None else stds
         transforms.append(
             T.Normalize(
-                (123.68, 116.779, 103.939) if means is None else means,
-                (58.393, 51.12, 57.375) if stds is None else stds,
+                means,
+                stds,
             )
         )
     # TODO: PCA colors Augment

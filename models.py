@@ -36,11 +36,11 @@ class MLP(nn.Module):
 def conv_bn(
     in_channels: int, out_channels: int, kernel_size: int, *args, **kwargs
 ):
+    """2D convolution followed by BatchNorm, used everywhere in the ResNet."""
     return nn.Sequential(
         nn.Conv2d(in_channels, out_channels, kernel_size, *args, **kwargs),
         nn.BatchNorm2d(out_channels),
     )
-
 
 class Resnet(nn.Module):
     def __init__(
@@ -83,6 +83,8 @@ class Resnet(nn.Module):
             in_channels = channel_size * expansion
         self.layers = nn.ModuleList(layers)
         self.head = ResnetHead(in_channels=in_channels, n_classes=n_classes)
+        self.apply(xavier_init)
+        self.zero_out_blocks()
 
     def forward(self, x):
         x = self.stem(x)
@@ -91,6 +93,37 @@ class Resnet(nn.Module):
         x = self.head(x)
         return x
 
+    def get_params(self):
+        """Return to parameter groups: with and without weight decay"""
+        no_decay = []
+        with_decay = []
+        for name, params in self.named_parameters():
+            if "bias" in name:
+                no_decay.append(params)
+            else:
+                with_decay.append(params)
+        assert len(list(self.parameters())) == len(no_decay) + len(with_decay)
+        return no_decay, with_decay
+    
+    def zero_out_blocks(self):
+        """Zero out blocks by setting the scale of batch norm layers at the end of each residual block to 0."""
+        for res_layer in self.layers:
+            res_layer.input_block.expand.apply(zero_scale_init_bn)
+            for block in res_layer.later_blocks:
+                block.expand.apply(zero_scale_init_bn)
+
+
+def xavier_init(m):
+    """Use the uniform Xavier initialization for linear and convolution layers."""
+    if isinstance(m, nn.Linear) or isinstance(m, nn.Conv2d):
+        nn.init.xavier_uniform_(m.weight)
+        if m.bias is not None:
+            nn.init.zeros_(m.bias)
+
+def zero_scale_init_bn(m):
+    """Useful to have skip through connections"""
+    if isinstance(m, nn.BatchNorm2d):
+        nn.init.zeros_(m.weight)
 
 class ResnetHead(nn.Module):
     def __init__(self, in_channels: int, n_classes: int):

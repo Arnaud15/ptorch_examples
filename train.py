@@ -60,7 +60,6 @@ def training_loop(
             opt.zero_grad()
             loss_item.backward()
             opt.step()
-            scheduler.step()
 
             train_loss = update_ewma(
                 obs=loss_item, prev=train_loss, alpha=smoothing_alpha
@@ -88,6 +87,9 @@ def training_loop(
                     os.path.join(save_path, f"{name}-{train_steps}.pt"),
                 )
 
+        # one step per epoch
+        scheduler.step()
+
         model.eval()
         with torch.no_grad():
             for (x, y) in eval_loader:
@@ -113,3 +115,4 @@ def training_loop(
                 if write_every and eval_steps % write_every == 0:
                     writer.add_scalar("Loss/eval", loss_item, eval_steps)
                     writer.add_scalar("Metric/eval", metric_item, eval_steps)
+        return model, opt
