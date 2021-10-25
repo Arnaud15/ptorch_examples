@@ -42,7 +42,7 @@ def conv_bn(
         nn.BatchNorm2d(out_channels),
     )
 
-class Resnet(nn.Module):
+class ResNet(nn.Module):
     def __init__(
         self,
         img_channels: int,
@@ -56,7 +56,7 @@ class Resnet(nn.Module):
         stem_downsample: bool = True,
         expansion: int = 4,
     ):
-        super(Resnet, self).__init__()
+        super(ResNet, self).__init__()
         assert len(extra_blocks_per_layer) > 0
         assert len(extra_blocks_per_layer) == len(resnet_channels)
         self.stem = ResnetStem(
