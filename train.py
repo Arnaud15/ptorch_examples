@@ -7,7 +7,8 @@ import torch.optim as optim
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 
-from utils import update_ewma
+from data_loading import DATA_DIR
+from utils import update_ewma, write_lr
 
 Scheduler = (Any,)
 
@@ -24,6 +25,7 @@ def training_loop(
     n_epochs: int,
     print_every: int = 0,
     write_every: int = 0,
+    plot_every: int = 0,
     check_every: int = 0,
     smoothing_alpha: float = 0.9,
     metric_fn: Optional[Callable] = None,
@@ -32,17 +34,20 @@ def training_loop(
     assert (
         smoothing_alpha > 0.0 and smoothing_alpha <= 1.0
     ), f"got smoothing alpha={smoothing_alpha}"
-    if print_every:
-        assert print_every > 0
-    if write_every:
-        assert write_every > 0
-        logs_path = os.path.join("data", "logs")
+    assert print_every >= 0
+    assert write_every >= 0
+    assert plot_every >= 0
+    assert check_every >= 0
+    if write_every or plot_every:
+        logs_path = os.path.join(DATA_DIR, "logs")
         if not os.path.isdir(logs_path):
             os.mkdir(logs_path)
-        writer = SummaryWriter(log_dir=os.path.join(logs_path, name))
+        run_path = os.path.join(logs_path, name)
+        if not os.path.isdir(run_path):
+            os.mkdir(run_path)
+        writer = SummaryWriter(log_dir=run_path)
     if check_every:
-        assert check_every > 0
-        save_path = os.path.join("data", "checkpoints")
+        save_path = os.path.join(DATA_DIR, "checkpoints")
         if not os.path.isdir(save_path):
             os.mkdir(save_path)
 
@@ -51,6 +56,7 @@ def training_loop(
     train_steps = 0
     eval_steps = 0
     for epoch_ix in range(n_epochs):
+        print(f"Start of epoch {epoch_ix + 1}")
         model.train()
         for (x, y) in train_loader:
             x = x.to(device)
@@ -76,6 +82,9 @@ def training_loop(
                 writer.add_scalar("Loss/train", loss_item, train_steps)
                 writer.add_scalar("Metric/train", metric_item, train_steps)
 
+            if plot_every and train_steps % plot_every == 0:
+                pass  # TODO
+
             if check_every and train_steps % check_every == 0:
                 torch.save(
                     {
@@ -88,6 +97,8 @@ def training_loop(
                 )
 
         # one step per epoch
+        if write_every:
+            write_lr(scheduler, writer, epoch_ix + 1)
         scheduler.step()
 
         model.eval()
@@ -105,14 +116,15 @@ def training_loop(
                 metric_item = (
                     metric_fn(y_hat, y) if metric_fn is not None else 1.0
                 )
-                if print_every and eval_steps % print_every == 0:
-                    print(
-                        f"Step: {eval_steps} | Validation Loss: {loss_item:.5f}"
-                    )
-                    print(
-                        f"Step: {eval_steps} | Validation Metric: {metric_item:.5f}"
-                    )
-                if write_every and eval_steps % write_every == 0:
-                    writer.add_scalar("Loss/eval", loss_item, eval_steps)
-                    writer.add_scalar("Metric/eval", metric_item, eval_steps)
-        return model, opt
+            if write_every:
+                writer.add_scalar("Loss/eval", loss_item, eval_steps)
+                writer.add_scalar("Metric/eval", metric_item, eval_steps)
+
+            if print_every:
+                print(f"Step: {eval_steps} | Validation Loss: {loss_item:.5f}")
+                print(
+                    f"Step: {eval_steps} | Validation Metric: {metric_item:.5f}"
+                )
+            if plot_every:
+                pass  # TODO
+    return model, opt

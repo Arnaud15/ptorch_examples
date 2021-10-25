@@ -3,6 +3,9 @@ from typing import List
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import torch.optim as optim
+
+from args import ResNetTrainingArgs
 
 
 class MLP(nn.Module):
@@ -41,6 +44,7 @@ def conv_bn(
         nn.Conv2d(in_channels, out_channels, kernel_size, *args, **kwargs),
         nn.BatchNorm2d(out_channels),
     )
+
 
 class ResNet(nn.Module):
     def __init__(
@@ -104,7 +108,7 @@ class ResNet(nn.Module):
                 with_decay.append(params)
         assert len(list(self.parameters())) == len(no_decay) + len(with_decay)
         return no_decay, with_decay
-    
+
     def zero_out_blocks(self):
         """Zero out blocks by setting the scale of batch norm layers at the end of each residual block to 0."""
         for res_layer in self.layers:
@@ -120,10 +124,12 @@ def xavier_init(m):
         if m.bias is not None:
             nn.init.zeros_(m.bias)
 
+
 def zero_scale_init_bn(m):
     """Useful to have skip through connections"""
     if isinstance(m, nn.BatchNorm2d):
         nn.init.zeros_(m.weight)
+
 
 class ResnetHead(nn.Module):
     def __init__(self, in_channels: int, n_classes: int):

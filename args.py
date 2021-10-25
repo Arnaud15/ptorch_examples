@@ -25,5 +25,4 @@ class ResNetTrainingArgs:
 
 def to_exp_name(args: ResNetTrainingArgs) -> str:
     """Util to get experiment names."""
-    return str(args).replace(" ", "")
-
+    return "_".join(str(val) for val in vars(args).values())

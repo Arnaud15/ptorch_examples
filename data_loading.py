@@ -36,13 +36,9 @@ def transforms_image_net(
     if standardize:
         means = (123.68, 116.779, 103.939) if means is None else means
         stds = (58.393, 51.12, 57.375) if stds is None else stds
-        transforms.append(
-            T.Normalize(
-                means,
-                stds,
-            )
-        )
+        transforms.append(T.Normalize(means, stds,))
     # TODO: PCA colors Augment
+    transforms.append(T.ToTensor())
     return T.Compose(transforms)
 
 
