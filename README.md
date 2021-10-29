@@ -17,7 +17,7 @@ Results on CIFAR-10's test set:
 | Setup      | Accuracy |
 | ----------- | ----------- |
 | Baseline      | 0.915      |
-| Baseline+ResNet simple tweaks   | TBD        |
+| Baseline+ResNet simple tweaks   | 0.915        |
 
 
 Baseline:
