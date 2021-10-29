@@ -54,6 +54,8 @@ class ResNet(nn.Module):
         extra_blocks_per_layer: List[int],
         resnet_channels: List[int],
         stem_channels: int,
+        slender_stem: bool,
+        better_downsampling: bool,
         resblock_kernel_size: int = 3,
         stem_conv_size: int = 7,
         stem_pool_size: int = 3,
@@ -64,6 +66,7 @@ class ResNet(nn.Module):
         assert len(extra_blocks_per_layer) > 0
         assert len(extra_blocks_per_layer) == len(resnet_channels)
         self.stem = ResnetStem(
+            slender_stem=slender_stem,
             in_channels=img_channels,
             out_channels=stem_channels,
             conv_size=stem_conv_size,
@@ -82,6 +85,7 @@ class ResNet(nn.Module):
                     in_channels=in_channels,
                     out_channels=channel_size,
                     kernel_size=resblock_kernel_size,
+                    better_downsampling=better_downsampling,
                 )
             )
             in_channels = channel_size * expansion
@@ -152,15 +156,39 @@ class ResnetStem(nn.Module):
         conv_size: int,
         pool_size: int,
         downsample: bool,
+        slender_stem: bool,
     ):
         super(ResnetStem, self).__init__()
-        self.conv_layer = conv_bn(
-            in_channels,
-            out_channels,
-            kernel_size=conv_size,
-            stride=2 if downsample else 1,
-            padding=conv_size // 2,
-        )
+        if slender_stem:
+            # typically convs 3x3
+            self.conv_layer = nn.Sequential(
+                conv_bn(
+                    in_channels,
+                    out_channels,
+                    kernel_size=conv_size,
+                    stride=2 if downsample else 1,
+                    padding=conv_size // 2,
+                ),
+                *[
+                    conv_bn(
+                        out_channels,
+                        out_channels,
+                        kernel_size=conv_size,
+                        stride=1,
+                        padding=conv_size // 2,
+                    )
+                    for _ in range(2)
+                ],
+            )
+        else:
+            # typically a conv 7x7
+            self.conv_layer = conv_bn(
+                in_channels,
+                out_channels,
+                kernel_size=conv_size,
+                stride=2 if downsample else 1,
+                padding=conv_size // 2,
+            )
         self.max_pool = nn.MaxPool2d(
             kernel_size=pool_size,
             stride=2 if downsample else 1,
@@ -180,6 +208,7 @@ class ResnetLayer(nn.Module):
         expansion: int,
         in_channels: int,
         out_channels: int,
+        better_downsampling: bool,
         kernel_size: int = 3,
     ):
         super(ResnetLayer, self).__init__()
@@ -190,6 +219,7 @@ class ResnetLayer(nn.Module):
             out_channels=out_channels,
             downsample=downsample,
             kernel_size=kernel_size,
+            better_downsampling=better_downsampling,
         )
         self.later_blocks = nn.ModuleList(
             [
@@ -217,30 +247,54 @@ class BottleneckProjection(nn.Module):
         in_channels: int,
         out_channels: int,
         downsample: bool,
+        better_downsampling: bool,
         kernel_size: int = 3,
     ):
         super(BottleneckProjection, self).__init__()
         self.expansion = expansion
-        self.projection = conv_bn(
-            in_channels,
-            out_channels * expansion,
-            kernel_size=1,
-            stride=2 if downsample else 1,
-        )
+        if downsample:
+            if better_downsampling:
+                self.projection = nn.Sequential(
+                    nn.AvgPool2d(kernel_size=2, stride=2, padding=0),
+                    conv_bn(
+                        in_channels,
+                        out_channels * expansion,
+                        kernel_size=1,
+                        stride=1,
+                    ),
+                )
+                compress_stride = 1
+                conv_stride = 2
+            else:
+                self.projection = conv_bn(
+                    in_channels,
+                    out_channels * expansion,
+                    kernel_size=1,
+                    stride=2,
+                )
+                compress_stride = 2
+                conv_stride = 1
+        else:
+            self.projection = conv_bn(
+                in_channels, out_channels * expansion, kernel_size=1, stride=1,
+            )
+            compress_stride = 1
+            conv_stride = 1
         self.compress = conv_bn(
             in_channels,
             out_channels,
             kernel_size=1,
-            stride=2 if downsample else 1,
+            stride=compress_stride,
             padding=0,
         )
         self.conv = conv_bn(
             out_channels,
             out_channels,
             kernel_size=kernel_size,
-            stride=1,
+            stride=conv_stride,
             padding=kernel_size // 2,
         )
+
         self.expand = conv_bn(
             out_channels,
             out_channels * self.expansion,
