@@ -7,6 +7,7 @@ import torch.nn as nn
 import torch.optim as optim
 import torchvision.transforms.functional as F
 from torch.utils.tensorboard import SummaryWriter
+from torchvision.utils import make_grid
 
 
 def update_ewma(obs: float, prev: Optional[float], alpha: float) -> float:
@@ -57,13 +58,14 @@ def write_lr(scheduler: Any, writer: SummaryWriter, step: int):
         )
 
 
-def show(imgs):
-    plt.rcParams["savefig.bbox"] = "tight"
-    if not isinstance(imgs, list):
-        imgs = [imgs]
-    fix, axs = plt.subplots(ncols=len(imgs), squeeze=False)
-    for i, img in enumerate(imgs):
-        img = img.detach()
+def show(img: torch.Tensor):
+    """Small utility to plot a tensort of img"""
+    img = img.detach()
+    try:
         img = F.to_pil_image(img)
-        axs[0, i].imshow(np.asarray(img))
-        axs[0, i].set(xticklabels=[], yticklabels=[], xticks=[], yticks=[])
+    except ValueError:  # handle batched images to plot
+        img = make_grid(img)
+        img = F.to_pil_image(img)
+    plt.imshow(np.asarray(img))
+    plt.xticks([])  # remove pyplot borders
+    plt.yticks([])

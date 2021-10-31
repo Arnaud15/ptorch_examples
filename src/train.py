@@ -7,8 +7,8 @@ import torch.optim as optim
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 
-from data_loading import DATA_DIR
-from utils import update_ewma, write_lr
+from src.constants import DATA_DIR
+from src.utils import update_ewma, write_lr
 
 Scheduler = (Any,)
 
@@ -83,7 +83,7 @@ def training_loop(
                 writer.add_scalar("Metric/train", metric_item, train_steps)
 
             if plot_every and train_steps % plot_every == 0:
-                pass  # TODO
+                writer.add_images("Plots/train", x[:15], train_steps)
 
             if check_every and train_steps % check_every == 0:
                 torch.save(
@@ -126,5 +126,5 @@ def training_loop(
                     f"Step: {eval_steps} | Validation Metric: {metric_item:.5f}"
                 )
             if plot_every:
-                pass  # TODO
+                writer.add_images("Plots/eval", x[:15], eval_steps)
     return model, opt

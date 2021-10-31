@@ -5,7 +5,7 @@ import torch.nn as nn
 from torch.utils.data import DataLoader
 from torchvision.utils import make_grid
 
-from utils import show
+from src.utils import show
 
 
 def test_loop(
@@ -42,7 +42,7 @@ def test_loop(
 
     if plot:
         (x, y) = next(iter(test_loader))
-        show(make_grid(x))
+        show(x)
         y_hat = torch.max(model(x.to(device)), 1)[1]
         print(f"Grid generated with labels: {y.detach().numpy()}")
         print(f"Corresponding predictions: {y_hat.cpu().detach().numpy()}")
