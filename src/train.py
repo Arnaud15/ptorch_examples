@@ -10,14 +10,12 @@ from torch.utils.tensorboard import SummaryWriter
 from src.constants import DATA_DIR
 from src.utils import update_ewma, write_lr
 
-Scheduler = (Any,)
-
 
 def training_loop(
     name: str,  # identifier for the current run
     model: nn.Module,
     opt: optim.Optimizer,
-    scheduler: Scheduler,
+    scheduler: Any,
     train_loader: DataLoader,
     eval_loader: DataLoader,
     loss_fn: Callable,
@@ -97,9 +95,10 @@ def training_loop(
                 )
 
         # one step per epoch
-        if write_every:
-            write_lr(scheduler, writer, epoch_ix + 1)
-        scheduler.step()
+        if scheduler is not None:
+            scheduler.step()
+            if write_every:
+                write_lr(scheduler, writer, epoch_ix + 1)
 
         model.eval()
         with torch.no_grad():

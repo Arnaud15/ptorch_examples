@@ -17,8 +17,9 @@ def update_ewma(obs: float, prev: Optional[float], alpha: float) -> float:
         return alpha * obs + (1.0 - alpha) * prev
 
 
-def accuracy(preds, targets):
-    return (torch.max(preds, 1)[1] == targets).float().mean()
+def accuracy(logits, labels):
+    argmaxes = torch.max(logits, 1)[1]
+    return (argmaxes == labels).float().mean()
 
 
 def get_optimizer(
@@ -31,7 +32,7 @@ def get_optimizer(
 ) -> optim.Optimizer:
     """Utility to get the optimizer and handle weight decay."""
     if use_adam:
-        raise NotImplementedError("coming up soon")
+        raise NotImplementedError("Adam not implemented yet")
     else:
         # SGD with momentum
         other_params = {"lr": lr, "momentum": momentum, "nesterov": True}
@@ -69,3 +70,5 @@ def show(img: torch.Tensor):
     plt.imshow(np.asarray(img))
     plt.xticks([])  # remove pyplot borders
     plt.yticks([])
+    plt.show()
+    plt.close()

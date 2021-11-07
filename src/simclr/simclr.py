@@ -1,11 +1,20 @@
-import matplotlib.pyplot as plt
+"""Minimal pytorch implementation of SimCLR [1].  
+
+[1] - https://arxiv.org/abs/2002.05709
+
+TODO - GPU support
+"""
+from typing import Callable, Optional, Tuple
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.utils.data import DataLoader
+from torchtyping import TensorType  # type: ignore
 
 
 class ContrastiveLearner(nn.Module):
+    """Minimal module class for constrastive learning models."""
+
     def __init__(self, encoder: nn.Module, projection: nn.Module):
         super(ContrastiveLearner, self).__init__()
         self.encoder = encoder
@@ -17,32 +26,68 @@ class ContrastiveLearner(nn.Module):
         return h, z
 
 
-def encode_simclr(x, model, transform):
+def encode_simclr(
+    x: torch.Tensor,
+    model: nn.Module,
+    transform: Callable[[torch.Tensor], torch.Tensor],
+) -> Tuple[torch.Tensor, TensorType["b", "e1"], TensorType["b", "e2"]]:
+    """Helper encoding function for SimCLR"""
     t = transform(x)
     h, z = model(t)
-    return t, h, z
+    s = F.normalize(z)
+    return t, h, s
 
 
-def info_nce(z1, z2, temp):
-    assert z1.size() == z2.size()
-    assert z2.dim() == 2
-    n = z1.size(0)
-    z1 = F.normalize(z1)
-    z2 = F.normalize(z2)
-    features = torch.cat([z1, z2])
+def get_sim_matrix(
+    features: TensorType["2b", "e2"], temp: Optional[float] = 1.0
+) -> TensorType["2b", "2b"]:
+    """Computes the matrix of similarities in SimCLR"""
     sims = torch.matmul(features, torch.t(features))
-    sims = sims / temp
+    return sims / temp
+
+
+def manual_cross_entropy(
+    logits: torch.Tensor, labels: torch.Tensor,
+) -> TensorType[1, torch.float]:
+    """Naive cross entropy impl, to double check"""
+    assert labels.dim() == 1, labels.size()
+    assert logits.dim() == 2, logits.size()
+    assert logits.size(0) == labels.size(0), (logits.size(0), labels.size(0))
+    labels = labels.unsqueeze(1)
+    positive = torch.gather(logits, 1, labels).squeeze(1)
+    return torch.mean(torch.logsumexp(logits, dim=1) - positive)
+
+
+def simclr_loss(
+    s1: TensorType["b", "e2"],
+    s2: TensorType["b", "e2"],
+    temp: Optional[float] = 1.0,
+) -> Tuple[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]:
+    """Computes and returns the contrastive learning loss from SimCLR + auxiliary data for evaluation"""
+    assert s1.size() == s2.size()
+    assert s2.dim() == 2
+    n, p = s1.size()
+    features = torch.cat([s1, s2])
+    assert features.size() == (2 * n, p), (features.size(), n, p)
+    sims = get_sim_matrix(features, temp)
+    assert sims.size() == (2 * n, 2 * n)
     mask = torch.eye(2 * n, dtype=torch.bool)
-    negative = sims[~mask].view(2 * n, 2 * n - 1)
-    idxs = torch.cat([(torch.arange(n) + n).unsqueeze(1), torch.arange(n).unsqueeze(1)])
-    positive = torch.gather(sims, 1, idxs).squeeze(1)
-    assert positive.size() == (2 * n,)
-    out = torch.logsumexp(negative, dim=1) - positive
-    return torch.mean(out)
+    logits = sims[~mask].view(2 * n, 2 * n - 1)
+    labels = torch.cat([(torch.arange(n) + n - 1), torch.arange(n)])
+    return (
+        nn.CrossEntropyLoss(reduction="mean")(logits, labels),
+        (logits, labels),
+    )
 
 
-def step(x, model, transform):
-    t1, h1, z1 = encode_simclr(x, model, transform)
-    t2, h2, z2 = encode_simclr(x, model, transform)
-    loss = info_nce(z2, z2, temp=1.0)
-    return torch.cat([t1, t2, z1]), loss
+def step(
+    x: torch.Tensor,
+    model: nn.Module,
+    transform: Callable[[torch.Tensor], torch.Tensor],
+    temp: Optional[float] = 1.0,
+) -> Tuple[torch.Tensor, float, Tuple[torch.Tensor, torch.Tensor]]:
+    """SimCLR learning step"""
+    t1, h1, s1 = encode_simclr(x, model, transform)
+    t2, h2, s2 = encode_simclr(x, model, transform)
+    loss, logits_labels = simclr_loss(s1, s2, temp)
+    return (t1, t2, s1, s2), loss, logits_labels

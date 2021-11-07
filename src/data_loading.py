@@ -1,5 +1,6 @@
-from typing import Callable, Optional, Set, Tuple
+from typing import Callable, Optional, Tuple, List
 
+import numpy as np
 import torch
 import torchvision.transforms as T
 from torch.utils.data import DataLoader, Dataset, Subset, random_split
@@ -8,29 +9,43 @@ from torchvision.datasets import CIFAR10, MNIST, FashionMNIST, ImageNet
 from src.constants import DATA_DIR
 
 
-def subset_classes(dataset: Dataset, classes_retained: Set[int]) -> Dataset:
+def subset_classes(
+    dataset: Dataset,
+    classes_retained: List[int],
+    class_probas: Optional[List[float]] = None,
+) -> Dataset:
     """Returns a subset of the data, where observations all come
     from one of the `classes_retained`. 
 
     All integers in `classes_retained` must therefore be in
     [0, num classes).
 
+    Additionally support probabilitistic subsampling for each class (to simulate dataset imbalance).
+
     Assumes a map-style dataset (implements __getitem__) with
     tuple observations (x, y), y an integer representing x's class label."""
     n = len(dataset)
-    indices_retained = [
-        ix for ix in range(n) if dataset[ix][1] in classes_retained
-    ]
-    return Subset(dataset, indices_retained)
+    if class_probas is not None:
+        assert all(0.0 < x and x <= 1.0 for x in class_probas)
+        assert len(class_probas) == len(classes_retained)
+    retained = []
+    for ix in range(n):
+        label_ix = dataset[ix][1]
+        if label_ix in classes_retained:
+            if (class_probas is None) or (
+                np.random.rand() <= class_probas[label_ix]
+            ):
+                retained.append(ix)
+    return Subset(dataset, retained)
 
 
 def transforms_image_net(
-    is_image: bool = True,
-    crop: bool = True,
-    crop_size: Optional[int] = None,
-    flip: bool = True,
-    colors: bool = True,
-    standardize: bool = True,
+    is_image: bool,
+    crop: bool = False,
+    crop_size: int = None,
+    flip: bool = False,
+    colors: bool = False,
+    standardize: bool = False,
     means: Optional[Tuple[float]] = None,
     stds: Optional[Tuple[float]] = None,
 ) -> Callable:
