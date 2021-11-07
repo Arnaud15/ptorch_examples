@@ -28,7 +28,7 @@ class ContrastiveLearner(nn.Module):
 
 def encode_simclr(
     x: torch.Tensor,
-    model: nn.Module,
+    model: ContrastiveLearner,
     transform: Callable[[torch.Tensor], torch.Tensor],
 ) -> Tuple[torch.Tensor, TensorType["b", "e1"], TensorType["b", "e2"]]:
     """Helper encoding function for SimCLR"""
@@ -82,7 +82,7 @@ def simclr_loss(
 
 def step(
     x: torch.Tensor,
-    model: nn.Module,
+    model: ContrastiveLearner,
     transform: Callable[[torch.Tensor], torch.Tensor],
     temp: Optional[float] = 1.0,
 ) -> Tuple[torch.Tensor, float, Tuple[torch.Tensor, torch.Tensor]]:

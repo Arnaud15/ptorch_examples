@@ -17,9 +17,15 @@ def update_ewma(obs: float, prev: Optional[float], alpha: float) -> float:
         return alpha * obs + (1.0 - alpha) * prev
 
 
-def accuracy(logits, labels):
-    argmaxes = torch.max(logits, 1)[1]
-    return (argmaxes == labels).float().mean()
+def accuracy(logits, labels, top_k: int = 5):
+    assert isinstance(top_k, int)
+    assert top_k >= 1
+    if labels.dim() == 1:
+        labels = labels.unsqueeze(1)
+    else:
+        assert labels.dim() == 2
+    argmaxes = torch.topk(logits, k=top_k, dim=1)[1]
+    return (argmaxes == labels).sum(1).float().mean()
 
 
 def get_optimizer(
