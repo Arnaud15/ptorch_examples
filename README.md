@@ -1,5 +1,10 @@
 ## Deep Learning examples in Pytorch
 
+### SimCLR
+Simple Pytorch implementation in `src/simclr/simclr.py` with a notebook (available in Google Colab [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1VuH-5GxcCOoqPyBbMOkRwC1Zz39Kqz1W?usp=sharing)) to illustrate my recent [blog post about SimCLR](https://arnaudautef.com/deep%20learning/computer%20vision/contrastive%20learning/2021/11/08/simclr.html).
+
+The original paper is available [here](https://arxiv.org/abs/2002.05709).
+
 
 ### ResNet re-implementations
 The code in `src/models/resnet.py` is a re-implementation of the original ResNet [paper](https://arxiv.org/abs/1512.03385).
