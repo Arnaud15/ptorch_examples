@@ -142,7 +142,7 @@ def inner_train(
             if args.plot_every and train_steps % args.plot_every == 0:
                 writer.add_images("Plots/train", x[:15], train_steps)
                 if args.mixup_alpha is not None:
-                    writer.add_images("Plots/train_mix", x0[:15], train_steps)
+                    writer.add_images("Plots/train_mix", x_0[:15], train_steps)
 
             if args.check_every and train_steps % args.check_every == 0:
                 torch.save(
