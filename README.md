@@ -1,11 +1,13 @@
 ## Deep Learning examples in Pytorch
-For now, we are getting started with ResNet re-implementations.
+
+### SimCLR
+Simple Pytorch implementation in `src/simclr/simclr.py` with a notebook (available in Google Colab [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1VuH-5GxcCOoqPyBbMOkRwC1Zz39Kqz1W?usp=sharing)) to illustrate my recent [blog post about SimCLR](https://arnaudautef.com/deep%20learning/computer%20vision/contrastive%20learning/2021/11/08/simclr.html).
+
+The original paper is available [here](https://arxiv.org/abs/2002.05709).
 
 
-Check out a minimal demo on Google Colab: [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1fDUIkLjuU93LfLern0xHynnG4NWg-q7G?usp=sharing).
-
-
-The current code in `models.py` is a re-implementation of the original ResNet [paper](https://arxiv.org/abs/1512.03385).
+### ResNet re-implementations
+The code in `src/models/resnet.py` is a re-implementation of the original ResNet [paper](https://arxiv.org/abs/1512.03385).
 
 
 Next steps are implementing ideas from:
@@ -32,6 +34,7 @@ ResNet simple tweaks:
 - better downsampling, instead of stride 2 1x1 convolutions
 - 3 convolutions 3x3 instead of a single 7x7 convolution in the stem
 
-Next up:
+TODOs:
 - More training epochs with / without MixUp
 - Label smoothing
+- Reduce weight decay
