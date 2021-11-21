@@ -5,8 +5,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 
-from src.args import ResNetTrainingArgs
-
 
 def conv_bn(
     in_channels: int, out_channels: int, kernel_size: int, *args, **kwargs

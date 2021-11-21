@@ -1,4 +1,5 @@
-from typing import Any, Optional
+"""Training utilities."""
+from typing import Any, Optional, Tuple
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -6,11 +7,35 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 import torchvision.transforms.functional as F
+from scipy.stats import beta
 from torch.utils.tensorboard import SummaryWriter
 from torchvision.utils import make_grid
 
 
+def mixup(
+    x: torch.Tensor, y: torch.Tensor, alpha: float, n_classes: int
+) -> Tuple[torch.Tensor, torch.Tensor]:
+    """Applies Mixup to a batch of training examples in classification."""
+    assert alpha > 0.0
+    assert x.dim() > 1
+    assert x.size(0) == y.size(0)
+    if y.dim() == 1:
+        # we must one-hot encode y before the convex combination
+        y = nn.functional.one_hot(y, num_classes=n_classes)
+    else:
+        assert y.dim() == 2
+    permut = torch.randperm(x.size(0))
+    lamb = beta.rvs(alpha, alpha)
+    lamb = max(1.0 - lamb, lamb)
+    x_right = x[permut]
+    y_right = y[permut]
+    x_mix = x * lamb + x_right * (1.0 - lamb)
+    y_mix = y * lamb + y_right * (1.0 - lamb)
+    return (x_mix, y_mix)
+
+
 def update_ewma(obs: float, prev: Optional[float], alpha: float) -> float:
+    """Updates an exponentially weighted moving average."""
     if prev is None:
         return obs
     else:
@@ -18,6 +43,7 @@ def update_ewma(obs: float, prev: Optional[float], alpha: float) -> float:
 
 
 def accuracy(logits, labels, top_k: int = 5):
+    """Compute the top-k accuracy of logits given labels."""
     assert isinstance(top_k, int)
     assert top_k >= 1
     if labels.dim() == 1:
