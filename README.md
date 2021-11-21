@@ -2,10 +2,7 @@
 For now, we are getting started with ResNet re-implementations.
 
 
-Check out a minimal demo on Google Colab: [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1fDUIkLjuU93LfLern0xHynnG4NWg-q7G?usp=sharing).
-
-
-The current code in `models.py` is a re-implementation of the original ResNet [paper](https://arxiv.org/abs/1512.03385).
+The current code in `src/models/resnet.py` is a re-implementation of the original ResNet [paper](https://arxiv.org/abs/1512.03385).
 
 
 Next steps are implementing ideas from:
@@ -32,6 +29,7 @@ ResNet simple tweaks:
 - better downsampling, instead of stride 2 1x1 convolutions
 - 3 convolutions 3x3 instead of a single 7x7 convolution in the stem
 
-Next up:
+TODOs:
 - More training epochs with / without MixUp
 - Label smoothing
+- Reduce weight decay
