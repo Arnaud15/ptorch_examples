@@ -2,8 +2,8 @@
 
 ### SimCLR
 Simple Pytorch implementation in `src/simclr/simclr.py`.  
-An example notebook is provided where we look at a simplistic contrastive learning task, distinguishing points on the unit circle (available [here](https://github.com/Arnaud15/ptorch_examples/blob/master/simclr_unit_circle.ipynb) and in Google Colab [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1VuH-5GxcCOoqPyBbMOkRwC1Zz39Kqz1W?usp=sharing)) to illustrate my recent [blog post about SimCLR](https://arnaudautef.com/deep%20learning/computer%20vision/contrastive%20learning/2021/11/08/simclr.html).
-
+An example notebook is provided where we look at a simplistic contrastive learning task, distinguishing points on the unit circle (available [here](https://github.com/Arnaud15/ptorch_examples/blob/master/simclr_unit_circle.ipynb) and in Google Colab [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1VuH-5GxcCOoqPyBbMOkRwC1Zz39Kqz1W?usp=sharing)).  
+I wrote this to illustrate my recent [blog post about SimCLR](https://arnaudautef.com/deep%20learning/computer%20vision/contrastive%20learning/2021/11/08/simclr.html).  
 The original paper is available [here](https://arxiv.org/abs/2002.05709).
 
 ---
