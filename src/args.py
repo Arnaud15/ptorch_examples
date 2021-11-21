@@ -30,6 +30,7 @@ class TrainingArgs:
     batch_size: int
     num_classes: int
     num_epochs: int = 120
+    learning_rate: float = 0.1
     cosine_lr: bool = False
     warmup_epochs: int = 0
     decay_interval: int = 30

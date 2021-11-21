@@ -11,7 +11,7 @@ from torch.utils.tensorboard import SummaryWriter
 
 from src.args import TrainingArgs
 from src.constants import DATA_DIR
-from src.utils import mixup, update_ewma, write_lr
+from src.utils import mixup, set_learning_rate, update_ewma, write_lr
 
 
 def training_loop(
@@ -27,11 +27,13 @@ def training_loop(
 ):
     print(f"Training starts for {name}")
     if args.warmup_epochs:
+        set_learning_rate(opt, args.learning_rate / args.warmup_epochs)
         warm_scheduler = optim.lr_scheduler.LambdaLR(
             opt, lambda epoch_ix: (epoch_ix + 1)
         )  # 0 indexed epochs
         inner_train(
             name=name,
+            n_epochs=args.num_epochs,
             args=args,
             model=model,
             opt=opt,
@@ -51,8 +53,10 @@ def training_loop(
             opt, args.num_epochs, 0
         )
     print("Post-warmup begins")
+    set_learning_rate(opt, args.learning_rate)
     inner_train(
         name=name,
+        n_epochs=args.num_epochs,
         args=args,
         model=model,
         opt=opt,
@@ -67,6 +71,7 @@ def training_loop(
 
 def inner_train(
     name: str,  # identifier for the training run
+    n_epochs: int,
     args: TrainingArgs,
     model: nn.Module,
     opt: optim.Optimizer,
@@ -77,9 +82,7 @@ def inner_train(
     device: Any,
     metric_fn: Optional[Callable] = None,
 ):
-    assert (
-        args.num_epochs > 0
-    ), f"got a nonpositive number of epochs {args.num_epochs}"
+    assert n_epochs > 0, f"got a nonpositive number of epochs {n_epochs}"
     assert (
         args.smoothing_alpha > 0.0 and args.smoothing_alpha <= 1.0
     ), f"got smoothing alpha={args.smoothing_alpha}"
@@ -106,7 +109,7 @@ def inner_train(
     eval_loss = None
     train_steps = 0
     eval_steps = 0
-    for epoch_ix in range(args.num_epochs):
+    for epoch_ix in range(n_epochs):
         print(f"Start of epoch {epoch_ix + 1}")
         model.train()
         for (x, y) in train_loader:
@@ -166,25 +169,33 @@ def inner_train(
             for (x, y) in eval_loader:
                 x = x.to(device)
                 y = y.to(device)
+                y_0 = y
+                if args.mixup_alpha is not None:
+                    x_0 = x
+                    (x, y) = mixup(x, y, args.mixup_alpha, args.num_classes)
                 y_hat = model(x)
-                loss_item = loss_fn(y_hat, y)
+                loss = loss_fn(y_hat, y)
 
                 eval_loss = update_ewma(
-                    obs=loss_item, prev=eval_loss, alpha=args.smoothing_alpha
+                    obs=loss.item(), prev=eval_loss, alpha=args.smoothing_alpha
                 )
                 eval_steps += 1
-                metric_item = (
-                    metric_fn(y_hat, y) if metric_fn is not None else 1.0
+                metric = (
+                    metric_fn(y_hat, y_0).item()
+                    if metric_fn is not None
+                    else 1.0
                 )
             if args.write_every:
-                writer.add_scalar("Loss/eval", loss_item, eval_steps)
-                writer.add_scalar("Metric/eval", metric_item, eval_steps)
+                writer.add_scalar("Loss/eval", loss.item(), eval_steps)
+                writer.add_scalar("Metric/eval", metric, eval_steps)
 
             if args.print_every:
-                print(f"Step: {eval_steps} | Validation Loss: {loss_item:.5f}")
                 print(
-                    f"Step: {eval_steps} | Validation Metric: {metric_item:.5f}"
+                    f"Step: {eval_steps} | Validation Loss: {loss.item():.5f}"
                 )
+                print(f"Step: {eval_steps} | Validation Metric: {metric:.5f}")
             if args.plot_every:
                 writer.add_images("Plots/eval", x[:15], eval_steps)
+                if args.mixup_alpha is not None:
+                    writer.add_images("Plots/eval_mix", x_0[:15], train_steps)
     return model, opt

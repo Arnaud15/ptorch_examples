@@ -77,6 +77,12 @@ def get_optimizer(
         return optim.SGD([decay, no_decay])
 
 
+def set_learning_rate(opt: optim.Optimizer, lr: float):
+    """Sets the learning rate of an optimizer"""
+    for g in opt.param_groups:
+        g["lr"] = lr
+
+
 def write_lr(scheduler: Any, writer: SummaryWriter, step: int):
     """Utility to write learning rate(s) to tensorboard."""
     lr = scheduler.get_last_lr()
