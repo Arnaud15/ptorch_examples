@@ -1,8 +1,8 @@
 ## Deep Learning examples in Pytorch
-For now, we are getting started with ResNet re-implementations.
 
 
-The current code in `src/models/resnet.py` is a re-implementation of the original ResNet [paper](https://arxiv.org/abs/1512.03385).
+### ResNet re-implementations
+The code in `src/models/resnet.py` is a re-implementation of the original ResNet [paper](https://arxiv.org/abs/1512.03385).
 
 
 Next steps are implementing ideas from:
