@@ -25,6 +25,15 @@ def training_loop(
     device: Any,
     metric_fn: Optional[Callable] = None,
 ):
+    if args.write_every or args.plot_every:
+        logs_path = os.path.join(DATA_DIR, "logs")
+        if not os.path.isdir(logs_path):
+            os.mkdir(logs_path)
+        run_path = os.path.join(logs_path, name)
+        if not os.path.isdir(run_path):
+            os.mkdir(run_path)
+        writer = SummaryWriter(log_dir=run_path)
+
     print(f"Training starts for {name}")
     if args.warmup_epochs:
         set_learning_rate(opt, args.learning_rate / args.warmup_epochs)
@@ -43,6 +52,7 @@ def training_loop(
             loss_fn=loss_fn,
             metric_fn=metric_fn,
             device=device,
+            writer=writer,
         )
     if not args.cosine_lr:
         base_scheduler = optim.lr_scheduler.StepLR(
@@ -66,6 +76,7 @@ def training_loop(
         loss_fn=loss_fn,
         metric_fn=metric_fn,
         device=device,
+        writer=writer,
     )
 
 
@@ -80,6 +91,7 @@ def inner_train(
     eval_loader: DataLoader,
     loss_fn: Callable,
     device: Any,
+    writer: SummaryWriter,
     metric_fn: Optional[Callable] = None,
 ):
     assert n_epochs > 0, f"got a nonpositive number of epochs {n_epochs}"
@@ -92,14 +104,6 @@ def inner_train(
     assert args.check_every >= 0
     if args.mixup_alpha is not None:
         assert args.mixup_alpha > 0
-    if args.write_every or args.plot_every:
-        logs_path = os.path.join(DATA_DIR, "logs")
-        if not os.path.isdir(logs_path):
-            os.mkdir(logs_path)
-        run_path = os.path.join(logs_path, name)
-        if not os.path.isdir(run_path):
-            os.mkdir(run_path)
-        writer = SummaryWriter(log_dir=run_path)
     if args.check_every:
         save_path = os.path.join(DATA_DIR, "checkpoints")
         if not os.path.isdir(save_path):
