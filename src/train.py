@@ -42,7 +42,7 @@ def training_loop(
         )  # 0 indexed epochs
         inner_train(
             name=name,
-            n_epochs=args.num_epochs,
+            n_epochs=args.warmup_epochs,
             args=args,
             model=model,
             opt=opt,

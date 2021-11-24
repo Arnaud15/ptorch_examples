@@ -93,7 +93,7 @@ def write_lr(scheduler: Any, writer: SummaryWriter, step: int):
             )
     else:
         writer.add_scalar(
-            f"LearningRate_{ix}", x, step,
+            "LearningRate", x, step,
         )
 
 
